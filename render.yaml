@@ -4,7 +4,7 @@ services:
     name: smart-home-bot
     runtime: python
     plan: free
-    buildCommand: pip install python-telegram-bot python-dotenv && python minimal_main.py
+    buildCommand: pip install python-telegram-bot python-dotenv
     startCommand: python minimal_main.py
     envVars:
       - key: TELEGRAM_TOKEN
