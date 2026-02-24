@@ -1,18 +1,12 @@
 services:
-  # Умный дом Джарвиса
+  # Умный дом Джарвиса (минимальная версия)
   - type: web
     name: smart-home-bot
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && python main.py
-    startCommand: python main.py
+    buildCommand: pip install python-telegram-bot python-dotenv && python minimal_main.py
+    startCommand: python minimal_main.py
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
         description: Telegram токен для бота Джарвиса
-      - key: HOME_ASSISTANT_URL
-        value: http://localhost:8123
-        description: URL Home Assistant (опционально)
-      - key: HOME_ASSISTANT_TOKEN
-        sync: false
-        description: Токен Home Assistant (опционально)
