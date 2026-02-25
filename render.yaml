@@ -1,11 +1,11 @@
 services:
-  # Умный дом Джарвиса (финальная версия с threading)
-  - type: web
+  # Умный дом Джарвиса (Background Worker)
+  - type: worker
     name: smart-home-bot
     runtime: python
     plan: free
     buildCommand: pip install python-telegram-bot python-dotenv
-    startCommand: python render_final.py
+    startCommand: python render_worker.py
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
