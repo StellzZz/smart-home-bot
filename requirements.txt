@@ -28,7 +28,7 @@ flake8==6.1.0
 mypy==1.7.1
 
 # Security
-cryptography>=41.0.0
+cryptography==45.0.0
 
 # Database (for future scaling)
 sqlalchemy==2.0.23
