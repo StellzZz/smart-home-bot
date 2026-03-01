@@ -1,12 +1,119 @@
+# =============================================================================
+# Smart Home Bot - Render Deployment Configuration
+# =============================================================================
+
 services:
-  # Умный дом Джарвиса (Background Worker)
-  - type: worker
+  # Main Smart Home Bot Web Service
+  - type: web
     name: smart-home-bot
     runtime: python
     plan: free
-    buildCommand: pip install python-telegram-bot python-dotenv
-    startCommand: python render_worker.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py web
     envVars:
+      # Telegram Bot Configuration
       - key: TELEGRAM_TOKEN
         sync: false
-        description: Telegram токен для бота Джарвиса
+        description: Telegram bot token
+      - key: TELEGRAM_WEBHOOK_URL
+        sync: false
+        description: Webhook URL for Telegram bot
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+        description: Secret token for webhook validation
+        generateValue: true
+      
+      # Security Configuration
+      - key: TELEGRAM_USER_IDS
+        sync: false
+        description: Comma-separated list of allowed user IDs
+      - key: ALLOWED_USERNAMES
+        sync: false
+        description: Comma-separated list of allowed usernames
+      - key: RATE_LIMIT_REQUESTS
+        value: "30"
+        description: Number of requests allowed per time window
+      - key: RATE_LIMIT_PERIOD
+        value: "60"
+        description: Time window in seconds for rate limiting
+      
+      # Device Configuration
+      - key: TV_IP_ADDRESS
+        sync: false
+        description: IP address of Android TV
+      - key: TV_PORT
+        value: "5555"
+        description: Port for Android TV ADB connection
+      - key: VACUUM_IP_ADDRESS
+        sync: false
+        description: IP address of Xiaomi vacuum
+      - key: VACUUM_TOKEN
+        sync: false
+        description: Token for Xiaomi vacuum
+      - key: LIGHT_GATEWAY_IP
+        sync: false
+        description: IP address of Xiaomi light gateway
+      
+      # Application Configuration
+      - key: APP_NAME
+        value: "Smart Home Jarvis"
+        description: Application name
+      - key: APP_VERSION
+        value: "1.0.0"
+        description: Application version
+      - key: DEBUG
+        value: "false"
+        description: Enable debug mode
+      - key: LOG_LEVEL
+        value: "INFO"
+        description: Logging level
+      - key: LOG_FILE
+        value: "logs/smart_home.log"
+        description: Log file path
+      
+      # Voice Configuration
+      - key: SPEECH_RECOGNITION_ENABLED
+        value: "true"
+        description: Enable speech recognition
+      - key: SPEECH_SYNTHESIS_ENABLED
+        value: "true"
+        description: Enable speech synthesis
+      - key: SPEECH_LANGUAGE
+        value: "ru-RU"
+        description: Speech recognition language
+      
+      # Database Configuration
+      - key: DATABASE_URL
+        value: "sqlite:///./smart_home.db"
+        description: Database connection URL
+    
+    healthCheck:
+      path: /health
+      intervalSeconds: 30
+      timeoutSeconds: 10
+      gracePeriodSeconds: 10
+    
+    autoDeploy: true
+    
+    # Add health check and monitoring
+    headers:
+      - name: X-Frame-Options
+        value: DENY
+      - name: X-Content-Type-Options
+        value: nosniff
+      - name: X-XSS-Protection
+        value: "1; mode=block"
+
+# Optional: Add background worker for voice processing
+# Uncomment if you need background processing
+#
+#  - type: worker
+#    name: smart-home-worker
+#    runtime: python
+#    plan: free
+#    buildCommand: pip install -r requirements.txt
+#    startCommand: python worker.py
+#    envVars:
+#      - key: TELEGRAM_TOKEN
+#        sync: false
+#      # Add other environment variables as needed

@@ -1,0 +1,97 @@
+# =============================================================================
+# Smart Home Bot Docker Compose
+# =============================================================================
+
+version: '3.8'
+
+services:
+  smart-home-bot:
+    build: .
+    container_name: smart-home-bot
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_WEBHOOK_URL=${TELEGRAM_WEBHOOK_URL}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}
+      - TELEGRAM_USER_IDS=${TELEGRAM_USER_IDS}
+      - ALLOWED_USERNAMES=${ALLOWED_USERNAMES}
+      - TV_IP_ADDRESS=${TV_IP_ADDRESS}
+      - VACUUM_IP_ADDRESS=${VACUUM_IP_ADDRESS}
+      - LIGHT_GATEWAY_IP=${LIGHT_GATEWAY_IP}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=${DEBUG:-false}
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    networks:
+      - smart-home-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL for future scaling
+  postgres:
+    image: postgres:15-alpine
+    container_name: smart-home-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=smart_home
+      - POSTGRES_USER=smart_home
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - smart-home-network
+    ports:
+      - "5432:5432"
+    profiles:
+      - database
+
+  # Optional: Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: smart-home-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart-home-network
+    ports:
+      - "6379:6379"
+    profiles:
+      - cache
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: smart-home-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - smart-home-network
+    depends_on:
+      - smart-home-bot
+    profiles:
+      - production
+
+networks:
+  smart-home-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

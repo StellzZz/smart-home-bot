@@ -1,81 +1,92 @@
-import os
+"""Main entry point for Smart Home Bot"""
+
 import asyncio
-import threading
-try:
-    from flask import Flask
-except ImportError:
-    print("Flask не найден, используем веб-сервер по умолчанию")
-    Flask = None
+import uvicorn
+from contextlib import asynccontextmanager
 
-from telegram_bot import create_app
-# Временно отключаем голосовой модуль
-try:
-    from voice_handler import voice_handler
-    VOICE_ENABLED = True
-except ImportError:
-    print("🎤 Голосовой модуль не найден, работает только Telegram")
-    VOICE_ENABLED = False
+from config.settings import settings
+from config.logging_config import logger
+from bot.bot_app import smart_home_bot
 
-try:
-    from speech_synthesis import speech_synthesizer
-    SPEECH_ENABLED = True
-except ImportError:
-    print("🔊 Синтез речи не найден")
-    SPEECH_ENABLED = False
 
-if Flask:
-    app = Flask(__name__)
-
-    @app.route("/")
-    def home():
-        return "🏠 Умный дом Джарвиса активен"
-else:
-    app = None
-
-def run_voice_assistant():
-    """Запуск голосового ассистента в отдельном потоке"""
-    if VOICE_ENABLED:
-        print("🎤 Запускаю голосового ассистента Джарвиса...")
-        voice_handler.start_listening()
-    else:
-        print("🎤 Голосовой ассистент отключен")
-
-def run_telegram_bot():
-    """Запуск Telegram бота"""
-    print("🤖 Запускаю Telegram бота Джарвиса...")
-    import asyncio
+@asynccontextmanager
+async def lifespan(app):
+    """Manage application lifecycle"""
+    # Startup
+    logger.info("Starting Smart Home Bot...")
+    await smart_home_bot.initialize()
     
-    # Создаём event loop для потока
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    yield
     
+    # Shutdown
+    logger.info("Shutting down Smart Home Bot...")
+    await smart_home_bot.cleanup()
+
+
+async def run_polling():
+    """Run bot with polling mode"""
     try:
-        app_bot = create_app()
-        loop.run_until_complete(app_bot.run_polling())
+        await smart_home_bot.run_polling()
     except KeyboardInterrupt:
-        print("🤖 Telegram бот остановлен")
-    finally:
-        loop.close()
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        raise
+
+
+async def run_webhook():
+    """Run bot with webhook mode"""
+    try:
+        webhook_url = settings.TELEGRAM_WEBHOOK_URL
+        if not webhook_url:
+            logger.error("TELEGRAM_WEBHOOK_URL not configured")
+            return
+        
+        await smart_home_bot.run_webhook(webhook_url)
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        raise
+
+
+def run_web_server():
+    """Run web server with FastAPI"""
+    try:
+        # Configure FastAPI app
+        app = smart_home_bot.web_app
+        app.router.lifespan_context = lifespan
+        
+        # Run server
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=10000,
+            log_level=settings.LOG_LEVEL.lower()
+        )
+        
+    except Exception as e:
+        logger.error(f"Web server error: {e}")
+        raise
+
 
 if __name__ == "__main__":
-    print("🏠 Запускаю умный дом Джарвиса...")
+    import sys
     
-    # Запускаем голосового ассистента в отдельном потоке
-    voice_thread = threading.Thread(target=run_voice_assistant, daemon=True)
-    voice_thread.start()
-    
-    # Запускаем Telegram бота
-    telegram_thread = threading.Thread(target=run_telegram_bot, daemon=True)
-    telegram_thread.start()
-    
-    # Запускаем Flask сервер если доступен
-    if app:
-        app.run(host="0.0.0.0", port=10000)
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+        
+        if mode == "polling":
+            asyncio.run(run_polling())
+        elif mode == "webhook":
+            asyncio.run(run_webhook())
+        elif mode == "web":
+            run_web_server()
+        else:
+            print("Usage: python main.py [polling|webhook|web]")
+            print("  polling - Run bot with polling")
+            print("  webhook  - Run bot with webhook")
+            print("  web      - Run web server only")
     else:
-        # Если Flask недоступен, просто держим программу работающей
-        try:
-            while True:
-                import time
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("👋 Джарвис отключается...")
+        # Default: run web server (for deployment platforms like Render)
+        run_web_server()
