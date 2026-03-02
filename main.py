@@ -55,7 +55,6 @@ def run_web_server():
     try:
         # Configure FastAPI app
         app = smart_home_bot.web_app
-        app.router.lifespan_context = lifespan
         
         # Run server
         uvicorn.run(

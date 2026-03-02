@@ -60,19 +60,19 @@ class SmartHomeBot:
         self.application.add_handler(CommandHandler("health", bot_handlers.health_command))
         
         # Light commands
-        self.application.add_handler(CommandHandler("light_on", lambda u, c: bot_handlers.light_command(u, c, "on")))
-        self.application.add_handler(CommandHandler("light_off", lambda u, c: bot_handlers.light_command(u, c, "off")))
+        self.application.add_handler(CommandHandler("light_on", bot_handlers.light_command))
+        self.application.add_handler(CommandHandler("light_off", bot_handlers.light_command))
         
         # TV commands
-        self.application.add_handler(CommandHandler("tv_on", lambda u, c: bot_handlers.tv_command(u, c)))
-        self.application.add_handler(CommandHandler("tv_off", lambda u, c: bot_handlers.tv_command(u, c)))
+        self.application.add_handler(CommandHandler("tv_on", bot_handlers.tv_command))
+        self.application.add_handler(CommandHandler("tv_off", bot_handlers.tv_command))
         self.application.add_handler(CommandHandler("tv", bot_handlers.tv_command))
         
         # Vacuum commands
-        self.application.add_handler(CommandHandler("vacuum_start", lambda u, c: bot_handlers.vacuum_command(u, c, "start")))
-        self.application.add_handler(CommandHandler("vacuum_pause", lambda u, c: bot_handlers.vacuum_command(u, c, "pause")))
-        self.application.add_handler(CommandHandler("vacuum_dock", lambda u, c: bot_handlers.vacuum_command(u, c, "dock")))
-        self.application.add_handler(CommandHandler("vacuum_find", lambda u, c: bot_handlers.vacuum_command(u, c, "find")))
+        self.application.add_handler(CommandHandler("vacuum_start", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuum_pause", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuum_dock", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuum_find", bot_handlers.vacuum_command))
         
         # Message handlers
         self.application.add_handler(MessageHandler(filters.VOICE, bot_handlers.voice_message_handler))

@@ -207,31 +207,27 @@ class BotHandlers:
     @authorized_users_only
     @rate_limit
     @handle_errors
-    async def light_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE, action: str):
+    async def light_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle light commands"""
         try:
-            # Get room from command arguments
-            room = "all"
-            if context.args:
-                room = CommandValidator.validate_room(context.args[0])
-                if not room:
-                    await update.message.reply_text("❌ Неизвестная комната")
-                    return
+            # Extract command and room
+            command = update.message.text.split()[0].lower()
+            action = "on" if "_on" in command else "off"
+            
+            # Get room from context args
+            room = context.args[0] if context.args else "all"
             
             # Execute command
-            if action == "on":
-                success = await device_manager.toggle_light(room, True)
-                response_text = f"💡 Свет в {self._get_room_name(room)} включен" if success else "❌ Не удалось включить свет"
-            elif action == "off":
-                success = await device_manager.toggle_light(room, False)
-                response_text = f"💡 Свет в {self._get_room_name(room)} выключен" if success else "❌ Не удалось выключить свет"
+            success = await device_manager.execute_device_command("lights", action, {"room": room})
+            
+            if success:
+                room_text = f"в {room}" if room != "all" else "во всех комнатах"
+                await update.message.reply_text(f"💡 Свет {'включен' if action == 'on' else 'выключен'} {room_text}")
             else:
-                response_text = "❌ Неизвестное действие"
-            
-            await update.message.reply_text(response_text)
-            
+                await update.message.reply_text("❌ Не удалось выполнить команду")
+                
         except Exception as e:
-            logger.error(f"Error in light command: {e}")
+            logger.error(f"Light command error: {e}")
             await update.message.reply_text("❌ Ошибка выполнения команды")
     
     @authorized_users_only
@@ -240,23 +236,20 @@ class BotHandlers:
     async def tv_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle TV commands"""
         try:
-            if not context.args:
-                await update.message.reply_text("❌ Укажите команду: on, off, netflix, youtube")
-                return
+            # Extract command and action
+            command = update.message.text.split()[0].lower()
             
-            action = context.args[0].lower()
-            
-            if action in ["on", "включить"]:
-                success = await device_manager.toggle_tv(True)
-                response_text = "📺 Телевизор включен" if success else "❌ Не удалось включить телевизор"
-            elif action in ["off", "выключить"]:
-                success = await device_manager.toggle_tv(False)
-                response_text = "📺 Телевизор выключен" if success else "❌ Не удалось выключить телевизор"
-            elif action in ["netflix"]:
-                success = await device_manager.launch_tv_app("netflix")
-                response_text = "📺 Netflix запущен" if success else "❌ Не удалось запустить Netflix"
-            elif action in ["youtube"]:
-                success = await device_manager.launch_tv_app("youtube")
+            if command == "tv":
+                # Handle tv with app argument
+                app = context.args[0] if context.args else None
+                if app:
+                    success = await device_manager.execute_device_command("tv", "launch_app", {"app": app})
+                else:
+                    success = await device_manager.execute_device_command("tv", "status", {})
+            elif "_on" in command:
+                success = await device_manager.execute_device_command("tv", "on", {})
+            elif "_off" in command:
+                success = await device_manager.execute_device_command("tv", "off", {})
                 response_text = "📺 YouTube запущен" if success else "❌ Не удалось запустить YouTube"
             else:
                 response_text = "❌ Неизвестная команда"

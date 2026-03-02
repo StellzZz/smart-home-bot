@@ -17,22 +17,30 @@ def setup_webhook():
     
     if not RENDER_URL:
         print("❌ RENDER_URL not found!")
+        print("Please set RENDER_URL environment variable")
         return
     
     webhook_url = f"{RENDER_URL}/webhook"
+    
+    # Get webhook secret from environment
+    webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
     
     # Set webhook
     response = requests.post(
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
         json={
             "url": webhook_url,
-            "secret_token": os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+            "secret_token": webhook_secret
         }
     )
     
     if response.status_code == 200:
-        print(f"✅ Webhook set to: {webhook_url}")
-        print(f"📊 Response: {response.json()}")
+        result = response.json()
+        if result.get("ok"):
+            print(f"✅ Webhook set to: {webhook_url}")
+            print(f"📊 Response: {result}")
+        else:
+            print(f"❌ Error setting webhook: {result}")
     else:
         print(f"❌ Error setting webhook: {response.status_code}")
         print(f"📊 Response: {response.text}")
