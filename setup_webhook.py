@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-RENDER_URL = os.getenv("RENDER_URL")  # https://your-app.onrender.com
+RENDER_URL = os.getenv("RENDER_URL") or "https://smart-home-bot-nf8h.onrender.com"
 
 def setup_webhook():
     """Setup webhook for Telegram bot"""
