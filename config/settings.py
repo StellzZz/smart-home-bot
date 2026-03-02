@@ -58,9 +58,13 @@ class Settings(BaseSettings):
     
     @validator('TELEGRAM_USER_IDS', pre=True)
     def parse_user_ids(cls, v):
+        if v is None:
+            return []
         if isinstance(v, str):
-            return [int(x.strip()) for x in v.split(',')]
-        return v
+            return [int(x.strip()) for x in v.split(',') if x.strip()]
+        if isinstance(v, list):
+            return v
+        return []
     
     @validator('ALLOWED_USERNAMES', pre=True)
     def parse_usernames(cls, v):
