@@ -1,17 +1,17 @@
-# Core dependencies
+# Core dependencies - стабильные версии
 python-telegram-bot==20.7
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.9.2
-pydantic-settings==2.6.12
+pydantic==2.5.3
+pydantic-settings==2.1.0
 
 # Voice processing
 SpeechRecognition==3.10.0
 pyttsx3==2.90
 
-# HTTP client
-aiohttp==3.10.5
-requests==2.32.3
+# HTTP client - стабильные версии
+aiohttp==3.9.1
+requests==2.31.0
 
 # Environment and configuration
 python-dotenv==1.0.0
@@ -31,8 +31,8 @@ mypy==1.7.1
 # cryptography==45.0.0  # Will be installed as dependency
 
 # Database (for future scaling)
-sqlalchemy==2.0.31
-alembic==1.13.2
+sqlalchemy==2.0.23
+alembic==1.13.1
 
 # Additional utilities
 python-dateutil==2.8.2
