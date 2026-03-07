@@ -1,26 +1,17 @@
 """Main entry point for Smart Home Bot"""
 
 import asyncio
+import logging
 import uvicorn
-from contextlib import asynccontextmanager
+from fastapi import FastAPI
 
-from config.settings import settings
-from config.logging_config import logger
 from bot.bot_app import smart_home_bot
+from config.logging_config import setup_logging
+from config.settings import settings
 
-
-@asynccontextmanager
-async def lifespan(app):
-    """Manage application lifecycle"""
-    # Startup
-    logger.info("Starting Smart Home Bot...")
-    await smart_home_bot.initialize()
-    
-    yield
-    
-    # Shutdown
-    logger.info("Shutting down Smart Home Bot...")
-    await smart_home_bot.cleanup()
+# Setup logging
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 async def run_polling():
@@ -65,8 +56,7 @@ def run_web_server():
             app,
             host="0.0.0.0",
             port=10000,
-            log_level=settings.LOG_LEVEL.lower(),
-            lifespan=lifespan
+            log_level=settings.LOG_LEVEL.lower()
         )
         
     except Exception as e:

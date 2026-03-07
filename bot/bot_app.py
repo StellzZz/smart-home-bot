@@ -20,9 +20,24 @@ class SmartHomeBot:
     
     def __init__(self):
         self.application = None
-        self.web_app = FastAPI(title="Smart Home Bot API")
+        self.web_app = FastAPI(
+            title="Smart Home Bot API",
+            lifespan=self.lifespan
+        )
         self._initialized = False
         self._setup_web_app()
+    
+    async def lifespan(self, app):
+        """Manage application lifecycle"""
+        # Startup
+        logger.info("Starting Smart Home Bot...")
+        await self.initialize()
+        
+        yield
+        
+        # Shutdown
+        logger.info("Shutting down Smart Home Bot...")
+        await self.cleanup()
     
     async def _ensure_initialized(self):
         """Ensure bot is initialized"""
