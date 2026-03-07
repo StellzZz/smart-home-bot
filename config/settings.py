@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: str
     TELEGRAM_WEBHOOK_URL: Optional[str] = None
     TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
+    RENDER_URL: Optional[str] = None
     
     # Security Settings
     TELEGRAM_USER_IDS: List[int] = []
