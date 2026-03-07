@@ -146,6 +146,7 @@ class SmartHomeBot:
                 
                 # Get update data
                 update_data = await request.json()
+                logger.info(f"Received webhook update: {update_data}")
                 
                 # Create Update object - application should be initialized via lifespan
                 if not self.application or not self.application.bot:
@@ -153,9 +154,11 @@ class SmartHomeBot:
                     raise HTTPException(status_code=503, detail="Bot not ready")
                 
                 update = Update.de_json(update_data, self.application.bot)
+                logger.info(f"Processed update: {update}")
                 
                 # Process update
                 await self.application.process_update(update)
+                logger.info("Update processed successfully")
                 
                 return JSONResponse(content={"ok": True})
                 
