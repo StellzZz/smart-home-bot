@@ -123,9 +123,6 @@ class SmartHomeBot:
         async def telegram_webhook(request: Request):
             """Handle Telegram webhook"""
             try:
-                # Ensure bot is initialized
-                await self._ensure_initialized()
-                
                 # Validate webhook secret if configured
                 secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
                 if not auth_service.validate_webhook_secret(secret_token or ""):
@@ -135,7 +132,11 @@ class SmartHomeBot:
                 # Get update data
                 update_data = await request.json()
                 
-                # Create Update object
+                # Create Update object - application should be initialized via lifespan
+                if not self.application or not self.application.bot:
+                    logger.error("Bot application not initialized")
+                    raise HTTPException(status_code=503, detail="Bot not ready")
+                
                 update = Update.de_json(update_data, self.application.bot)
                 
                 # Process update

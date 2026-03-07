@@ -26,6 +26,8 @@ async def lifespan(app):
 async def run_polling():
     """Run bot with polling mode"""
     try:
+        await smart_home_bot.initialize()
+        logger.info("Starting bot polling...")
         await smart_home_bot.run_polling()
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
@@ -37,6 +39,8 @@ async def run_polling():
 async def run_webhook():
     """Run bot with webhook mode"""
     try:
+        await smart_home_bot.initialize()
+        
         webhook_url = settings.TELEGRAM_WEBHOOK_URL
         if not webhook_url:
             logger.error("TELEGRAM_WEBHOOK_URL not configured")
@@ -53,7 +57,7 @@ async def run_webhook():
 def run_web_server():
     """Run web server with FastAPI"""
     try:
-        # Configure FastAPI app
+        # Configure FastAPI app with lifespan
         app = smart_home_bot.web_app
         
         # Run server
@@ -61,7 +65,8 @@ def run_web_server():
             app,
             host="0.0.0.0",
             port=10000,
-            log_level=settings.LOG_LEVEL.lower()
+            log_level=settings.LOG_LEVEL.lower(),
+            lifespan=lifespan
         )
         
     except Exception as e:
