@@ -21,11 +21,20 @@ class SmartHomeBot:
     def __init__(self):
         self.application = None
         self.web_app = FastAPI(title="Smart Home Bot API")
+        self._initialized = False
         self._setup_web_app()
+    
+    async def _ensure_initialized(self):
+        """Ensure bot is initialized"""
+        if not self._initialized:
+            await self.initialize()
     
     async def initialize(self):
         """Initialize bot and connect to devices"""
         try:
+            if self._initialized:
+                return
+            
             # Initialize Telegram bot
             self.application = Application.builder().token(settings.TELEGRAM_TOKEN).build()
             self._setup_handlers()
@@ -42,6 +51,7 @@ class SmartHomeBot:
             # Start cleanup task for expired sessions
             asyncio.create_task(self._cleanup_task())
             
+            self._initialized = True
             logger.info("Smart Home Bot initialized successfully")
             
         except Exception as e:
@@ -110,6 +120,9 @@ class SmartHomeBot:
         async def telegram_webhook(request: Request):
             """Handle Telegram webhook"""
             try:
+                # Ensure bot is initialized
+                await self._ensure_initialized()
+                
                 # Validate webhook secret if configured
                 secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
                 if not auth_service.validate_webhook_secret(secret_token or ""):
