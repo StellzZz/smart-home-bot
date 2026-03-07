@@ -39,6 +39,9 @@ class SmartHomeBot:
             self.application = Application.builder().token(settings.TELEGRAM_TOKEN).build()
             self._setup_handlers()
             
+            # Initialize the application
+            await self.application.initialize()
+            
             # Connect to all devices
             logger.info("Connecting to devices...")
             connection_results = await device_manager.connect_all()
