@@ -38,13 +38,16 @@ class XiaomiLightController(BaseDevice):
             async with self.session.get(url) as response:
                 if response.status == 200:
                     self.logger.info("Connected to Xiaomi Gateway")
+                    self.is_connected = True
                     return True
                 else:
                     self.logger.error(f"Failed to connect to gateway: HTTP {response.status}")
+                    self.is_connected = False
                     return False
                     
         except Exception as e:
             self.logger.error(f"Error connecting to Xiaomi Gateway: {e}")
+            self.is_connected = False
             return False
     
     async def disconnect(self) -> bool:
@@ -54,6 +57,7 @@ class XiaomiLightController(BaseDevice):
                 await self.session.close()
                 self.session = None
             self.logger.info("Disconnected from Xiaomi Gateway")
+            self.is_connected = False
             return True
         except Exception as e:
             self.logger.error(f"Error disconnecting from Xiaomi Gateway: {e}")

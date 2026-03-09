@@ -15,6 +15,7 @@ class BaseDevice(ABC):
         self.name = name
         self.device_id = device_id
         self.is_online = True
+        self.is_connected = False  # Connection status for devices
         self.last_error = None
         self.logger = logging.getLogger(f"device.{device_id}")
     
