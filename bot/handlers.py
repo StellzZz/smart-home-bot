@@ -283,9 +283,10 @@ class BotHandlers:
         try:
             # Extract command and room
             if update.message:
-                command = update.message.text.split()[0].lower()
-                # Get room from context args
-                room = context.args[0] if context.args else "all"
+                command_parts = update.message.text.split()
+                command = command_parts[0].lower()
+                # Get room from command parts
+                room = command_parts[1] if len(command_parts) > 1 else "all"
             elif update.callback_query:
                 # For callback queries, extract action from callback data
                 data = update.callback_query.data
@@ -384,9 +385,12 @@ class BotHandlers:
                 return  # No message or callback
             
             if update.message:
+                command_parts = update.message.text.split()
+                command = command_parts[0].lower()
+                
                 if command == "tv":
                     # Handle tv with app argument
-                    app = context.args[0] if context.args else None
+                    app = command_parts[1] if len(command_parts) > 1 else None
                     if app:
                         success = await device_manager.execute_device_command("tv", "launch_app", {"app": app})
                         response_text = f"📺 Приложение {app} запущено" if success else f"❌ Не удалось запустить {app}"
@@ -449,6 +453,9 @@ class BotHandlers:
                 return  # No message or callback
             
             if update.message:
+                command_parts = update.message.text.split()
+                command = command_parts[0].lower()
+                
                 if "start" in command:
                     action = "start"
                 elif "pause" in command:
@@ -746,42 +753,17 @@ class BotHandlers:
             # Handle specific actions
             elif data.startswith("light_"):
                 if data == "light_all_on":
-                    success = await device_manager.toggle_all_lights(True)
-                    response = "💡 Весь свет включен" if success else "❌ Не удалось включить свет"
+                    await self.light_command(update, context)
                 elif data == "light_all_off":
-                    success = await device_manager.toggle_all_lights(False)
-                    response = "💡 Весь свет выключен" if success else "❌ Не удалось выключить свет"
-                await query.edit_message_text(response)
+                    await self.light_command(update, context)
             
             elif data.startswith("tv_"):
-                if data == "tv_on":
-                    success = await device_manager.toggle_tv(True)
-                    response = "📺 Телевизор включен" if success else "❌ Не удалось включить телевизор"
-                elif data == "tv_off":
-                    success = await device_manager.toggle_tv(False)
-                    response = "📺 Телевизор выключен" if success else "❌ Не удалось выключить телевизор"
-                elif data == "tv_netflix":
-                    success = await device_manager.launch_tv_app("netflix")
-                    response = "📺 Netflix запущен" if success else "❌ Не удалось запустить Netflix"
-                elif data == "tv_youtube":
-                    success = await device_manager.launch_tv_app("youtube")
-                    response = "📺 YouTube запущен" if success else "❌ Не удалось запустить YouTube"
-                await query.edit_message_text(response)
+                if data in ["tv_on", "tv_off", "tv_netflix", "tv_youtube"]:
+                    await self.tv_command(update, context)
             
             elif data.startswith("vacuum_"):
-                if data == "vacuum_start":
-                    success = await device_manager.start_vacuum()
-                    response = "🤖 Уборка начата" if success else "❌ Не удалось начать уборку"
-                elif data == "vacuum_pause":
-                    success = await device_manager.pause_vacuum()
-                    response = "🤖 Уборка приостановлена" if success else "❌ Не удалось приостановить уборку"
-                elif data == "vacuum_dock":
-                    success = await device_manager.dock_vacuum()
-                    response = "🤖 Пылесос возвращается на базу" if success else "❌ Не удалось отправить на базу"
-                elif data == "vacuum_find":
-                    success = await device_manager.find_vacuum()
-                    response = "🔊 Пылесос подает звуковой сигнал" if success else "❌ Не удалось найти пылесос"
-                await query.edit_message_text(response)
+                if data in ["vacuum_start", "vacuum_pause", "vacuum_dock", "vacuum_find"]:
+                    await self.vacuum_command(update, context)
             
         except Exception as e:
             logger.error(f"Error in callback query handler: {e}")
