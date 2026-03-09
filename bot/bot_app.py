@@ -89,18 +89,26 @@ class SmartHomeBot:
         
         # Light commands
         self.application.add_handler(CommandHandler("light_on", bot_handlers.light_command))
+        self.application.add_handler(CommandHandler("lighton", bot_handlers.light_command))
         self.application.add_handler(CommandHandler("light_off", bot_handlers.light_command))
+        self.application.add_handler(CommandHandler("lightoff", bot_handlers.light_command))
         
         # TV commands
         self.application.add_handler(CommandHandler("tv_on", bot_handlers.tv_command))
+        self.application.add_handler(CommandHandler("tvon", bot_handlers.tv_command))
         self.application.add_handler(CommandHandler("tv_off", bot_handlers.tv_command))
+        self.application.add_handler(CommandHandler("tvoff", bot_handlers.tv_command))
         self.application.add_handler(CommandHandler("tv", bot_handlers.tv_command))
         
         # Vacuum commands
         self.application.add_handler(CommandHandler("vacuum_start", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuumstart", bot_handlers.vacuum_command))
         self.application.add_handler(CommandHandler("vacuum_pause", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuumpause", bot_handlers.vacuum_command))
         self.application.add_handler(CommandHandler("vacuum_dock", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuumdock", bot_handlers.vacuum_command))
         self.application.add_handler(CommandHandler("vacuum_find", bot_handlers.vacuum_command))
+        self.application.add_handler(CommandHandler("vacuumfind", bot_handlers.vacuum_command))
         
         # Message handlers
         self.application.add_handler(MessageHandler(filters.VOICE, bot_handlers.voice_message_handler))
