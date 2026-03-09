@@ -146,32 +146,38 @@ class SmartHomeBot:
         async def telegram_webhook(request: Request):
             """Handle Telegram webhook"""
             try:
+                logger.info("🔔 Webhook request received")
+                
                 # Validate webhook secret if configured
                 secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+                logger.info(f"🔐 Secret token: {secret_token[:10] if secret_token else 'None'}...")
+                
                 if not auth_service.validate_webhook_secret(secret_token or ""):
-                    logger.warning("Invalid webhook secret")
+                    logger.warning("❌ Invalid webhook secret")
                     raise HTTPException(status_code=403, detail="Invalid secret")
                 
                 # Get update data
                 update_data = await request.json()
-                logger.info(f"Received webhook update: {update_data}")
+                logger.info(f"📨 Received webhook update: {update_data}")
                 
-                # Create Update object - application should be initialized via lifespan
+                # Ensure bot is initialized
+                await self._ensure_initialized()
+                
                 if not self.application or not self.application.bot:
-                    logger.error("Bot application not initialized")
+                    logger.error("❌ Bot application not initialized")
                     raise HTTPException(status_code=503, detail="Bot not ready")
                 
                 update = Update.de_json(update_data, self.application.bot)
-                logger.info(f"Processed update: {update}")
+                logger.info(f"🔄 Processed update: {update}")
                 
                 # Process update
                 await self.application.process_update(update)
-                logger.info("Update processed successfully")
+                logger.info("✅ Update processed successfully")
                 
                 return JSONResponse(content={"ok": True})
                 
             except Exception as e:
-                logger.error(f"Webhook error: {e}")
+                logger.error(f"❌ Webhook error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
         @self.web_app.get("/security/stats")
