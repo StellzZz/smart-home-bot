@@ -2,19 +2,21 @@
 
 import asyncio
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+import logging
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CallbackQueryHandler
+from telegram.ext import ContextTypes, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 
-from config.settings import settings
-from config.logging_config import logger
+from utils.decorators import authorized_users_only, rate_limit, handle_errors
+from utils.validators import NaturalLanguageProcessor
 from services.auth_service import auth_service
 from services.voice_service import voice_service
 from devices.device_manager import device_manager
-from utils.decorators import authorized_users_only, rate_limit, handle_errors
-from utils.validators import CommandValidator, NaturalLanguageProcessor
+from config.logging_config import logger
 
+# МСК часовой пояс (UTC+3)
+MSK_TIMEZONE = timezone(timedelta(hours=3))
 
 class BotHandlers:
     """Class containing all bot handlers"""
@@ -63,6 +65,7 @@ class BotHandlers:
                 InlineKeyboardButton("📊 Статус", callback_data="status"),
             ],
             [
+                InlineKeyboardButton("⚙️ Настройки", callback_data="settings"),
                 InlineKeyboardButton("❓ Помощь", callback_data="help"),
             ]
         ]
@@ -155,7 +158,7 @@ class BotHandlers:
                 state_text = state_map.get(state, state)
                 status_text += f"🤖 Пылесос: {state_text}, заряд {battery}%\n"
             
-            status_text += f"\n🕐 Обновлено: {datetime.now().strftime('%H:%M:%S')}"
+            status_text += f"\n🕐 Обновлено: {datetime.now(MSK_TIMEZONE).strftime('%H:%M:%S')} (МСК)"
             
             await update.message.reply_text(status_text, parse_mode='Markdown')
             
@@ -212,9 +215,16 @@ class BotHandlers:
         try:
             # Extract command and room
             command = update.message.text.split()[0].lower()
-            action = "on" if "_on" in command else "off"
             
-            # Get room from context args
+            # Handle both formats: lighton/lightoff and light_on/light_off
+            if "on" in command:
+                action = "on"
+            elif "off" in command:
+                action = "off"
+            else:
+                action = "on"  # default
+            
+            # Get room from context args or command text
             room = context.args[0] if context.args else "all"
             
             # Execute command
@@ -244,14 +254,18 @@ class BotHandlers:
                 app = context.args[0] if context.args else None
                 if app:
                     success = await device_manager.execute_device_command("tv", "launch_app", {"app": app})
+                    response_text = f"📺 Приложение {app} запущено" if success else f"❌ Не удалось запустить {app}"
                 else:
                     success = await device_manager.execute_device_command("tv", "status", {})
-            elif "_on" in command:
+                    response_text = "📺 Статус ТВ получен" if success else "❌ Не удалось получить статус"
+            elif "on" in command:
                 success = await device_manager.execute_device_command("tv", "on", {})
-            elif "_off" in command:
+                response_text = "📺 ТВ включен" if success else "❌ Не удалось включить ТВ"
+            elif "off" in command:
                 success = await device_manager.execute_device_command("tv", "off", {})
-                response_text = "📺 YouTube запущен" if success else "❌ Не удалось запустить YouTube"
+                response_text = "📺 ТВ выключен" if success else "❌ Не удалось выключить ТВ"
             else:
+                success = False
                 response_text = "❌ Неизвестная команда"
             
             await update.message.reply_text(response_text)
@@ -263,23 +277,38 @@ class BotHandlers:
     @authorized_users_only
     @rate_limit
     @handle_errors
-    async def vacuum_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE, action: str):
+    async def vacuum_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle vacuum commands"""
         try:
+            # Extract command and action
+            command = update.message.text.split()[0].lower()
+            
+            if "start" in command:
+                action = "start"
+            elif "pause" in command:
+                action = "pause"
+            elif "dock" in command:
+                action = "dock"
+            elif "find" in command:
+                action = "find"
+            else:
+                action = "status"
+            
             if action == "start":
-                success = await device_manager.start_vacuum()
+                success = await device_manager.execute_device_command("vacuum", "start", {})
                 response_text = "🤖 Уборка начата" if success else "❌ Не удалось начать уборку"
             elif action == "dock":
-                success = await device_manager.dock_vacuum()
+                success = await device_manager.execute_device_command("vacuum", "dock", {})
                 response_text = "🤖 Пылесос возвращается на базу" if success else "❌ Не удалось отправить на базу"
             elif action == "pause":
-                success = await device_manager.pause_vacuum()
+                success = await device_manager.execute_device_command("vacuum", "pause", {})
                 response_text = "🤖 Уборка приостановлена" if success else "❌ Не удалось приостановить уборку"
             elif action == "find":
-                success = await device_manager.find_vacuum()
+                success = await device_manager.execute_device_command("vacuum", "find", {})
                 response_text = "🔊 Пылесос подает звуковой сигнал" if success else "❌ Не удалось найти пылесос"
             else:
-                response_text = "❌ Неизвестная команда"
+                success = await device_manager.execute_device_command("vacuum", "status", {})
+                response_text = "🤖 Статус пылесоса получен" if success else "❌ Не удалось получить статус"
             
             await update.message.reply_text(response_text)
             
@@ -451,6 +480,78 @@ class BotHandlers:
             
             elif data == "main_menu":
                 await self.start_command(update, context)
+            
+            elif data == "settings":
+                settings_text = (
+                    "⚙️ **Настройки Умного Дома**\n\n"
+                    "🕐 **Часовой пояс:** МСК (UTC+3)\n"
+                    "💡 **Яркость света:** 80%\n"
+                    "🌡️ **Температура комфорта:** 22°C\n"
+                    "🔊 **Громкость уведомлений:** Средняя\n\n"
+                    "⚠️ *Функция настроек в разработке*\n"
+                    "Скоро здесь появится управление параметрами!"
+                )
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("🕐 Часовой пояс", callback_data="settings_timezone"),
+                        InlineKeyboardButton("💡 Настройки света", callback_data="settings_lights"),
+                    ],
+                    [
+                        InlineKeyboardButton("🔙 Назад", callback_data="start"),
+                    ]
+                ]
+                
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.edit_message_text(
+                    settings_text,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+            
+            elif data == "settings_timezone":
+                timezone_text = (
+                    "🕐 **Настройка часового пояса**\n\n"
+                    "Текущий часовой пояс: **МСК (UTC+3)**\n\n"
+                    "⚠️ *Изменение часового пояса временно недоступно*\n"
+                    "Эта функция будет добавлена в следующем обновлении!"
+                )
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("🔙 Назад", callback_data="settings"),
+                    ]
+                ]
+                
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.edit_message_text(
+                    timezone_text,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+            
+            elif data == "settings_lights":
+                lights_text = (
+                    "💡 **Настройки освещения**\n\n"
+                    "Текущая яркость: **80%**\n"
+                    "Автоматическое выключение: **23:00**\n"
+                    "Утреннее включение: **07:00**\n\n"
+                    "⚠️ *Функция настроек света в разработке*\n"
+                    "Скоро здесь появится управление яркостью и таймерами!"
+                )
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("🔙 Назад", callback_data="settings"),
+                    ]
+                ]
+                
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.edit_message_text(
+                    lights_text,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
             
             # Handle specific actions
             elif data.startswith("light_"):
