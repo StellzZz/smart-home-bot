@@ -111,6 +111,7 @@ class DeviceManager:
                 logger.info(f"Simulated command '{command}' on {device_type} with params {params}")
                 return True
             
+            # Use safe_execute for online devices
             result = await device.safe_execute(command, params)
             
             if result:

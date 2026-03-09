@@ -2,7 +2,7 @@
 
 import os
 from typing import List, Optional
-from pydantic import validator
+from pydantic import validator, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -51,13 +51,13 @@ class Settings(BaseSettings):
     # Database Settings (for future scaling)
     DATABASE_URL: str = "sqlite:///./smart_home.db"
     
-    @validator('TELEGRAM_TOKEN')
+    @field_validator('TELEGRAM_TOKEN')
     def validate_telegram_token(cls, v):
         if not v or len(v) < 20:
             raise ValueError('Invalid Telegram token')
         return v
     
-    @validator('TELEGRAM_USER_IDS', pre=True)
+    @field_validator('TELEGRAM_USER_IDS', mode='before')
     def parse_user_ids(cls, v):
         if v is None:
             return []
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
             return v
         return []
     
-    @validator('ALLOWED_USERNAMES', pre=True)
+    @field_validator('ALLOWED_USERNAMES', mode='before')
     def parse_usernames(cls, v):
         if isinstance(v, str):
             return [x.strip() for x in v.split(',')]

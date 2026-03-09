@@ -72,11 +72,27 @@ class BotHandlers:
         
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
-            welcome_text,
-            parse_mode='Markdown',
-            reply_markup=reply_markup
-        )
+        # Handle both message and callback query
+        if update.message:
+            await update.message.reply_text(
+                welcome_text,
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+        elif update.callback_query:
+            await update.callback_query.edit_message_text(
+                welcome_text,
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+        else:
+            # Fallback - send new message
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=welcome_text,
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
     
     @authorized_users_only
     @rate_limit
@@ -84,17 +100,16 @@ class BotHandlers:
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
         help_text = (
-            "📖 *Справка по командам:*\n\n"
+            "🏠 *Умный Дом - Справка*\n\n"
             "💡 *Управление светом:*\n"
-            "• `/light_on [комната]` - Включить свет\n"
-            "• `/light_off [комната]` - Выключить свет\n"
-            "• `/light_brightness [комната] [0-100]` - Установить яркость\n\n"
-            "📺 *Управление телевизором:*\n"
-            "• `/tv_on` - Включить телевизор\n"
-            "• `/tv_off` - Выключить телевизор\n"
-            "• `/tv netflix` - Открыть Netflix\n"
-            "• `/tv youtube` - Открыть YouTube\n"
-            "• `/tv_volume up/down` - Громкость\n\n"
+            "• `/lighton [комната]` - Включить свет\n"
+            "• `/lightoff [комната]` - Выключить свет\n"
+            "• `/lighton` - Включить весь свет\n"
+            "• `/lightoff` - Выключить весь свет\n\n"
+            "📺 *Управление ТВ:*\n"
+            "• `/tvon` - Включить телевизор\n"
+            "• `/tvoff` - Выключить телевизор\n"
+            "• `/tv [приложение]` - Запустить приложение\n\n"
             "🤖 *Управление пылесосом:*\n"
             "• `/vacuum_start` - Начать уборку\n"
             "• `/vacuum_pause` - Пауза\n"
@@ -111,7 +126,18 @@ class BotHandlers:
             "• \"Покажи статус\""
         )
         
-        await update.message.reply_text(help_text, parse_mode='Markdown')
+        # Handle both message and callback query
+        if update.message:
+            await update.message.reply_text(help_text, parse_mode='Markdown')
+        elif update.callback_query:
+            await update.callback_query.message.reply_text(help_text, parse_mode='Markdown')
+        else:
+            # Fallback - send new message
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=help_text,
+                parse_mode='Markdown'
+            )
     
     @authorized_users_only
     @rate_limit
@@ -160,11 +186,32 @@ class BotHandlers:
             
             status_text += f"\n🕐 Обновлено: {datetime.now(MSK_TIMEZONE).strftime('%H:%M:%S')} (МСК)"
             
-            await update.message.reply_text(status_text, parse_mode='Markdown')
+            # Handle both message and callback query
+            if update.message:
+                await update.message.reply_text(status_text, parse_mode='Markdown')
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(status_text, parse_mode='Markdown')
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=status_text,
+                    parse_mode='Markdown'
+                )
             
         except Exception as e:
             logger.error(f"Error in status command: {e}")
-            await update.message.reply_text("❌ Не удалось получить статус устройств")
+            # Handle both message and callback query for error
+            if update.message:
+                await update.message.reply_text("❌ Не удалось получить статус устройств")
+            elif update.callback_query:
+                await update.callback_query.edit_message_text("❌ Не удалось получить статус устройств")
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="❌ Не удалось получить статус устройств"
+                )
     
     @authorized_users_only
     @rate_limit
@@ -201,11 +248,32 @@ class BotHandlers:
             
             health_text += f"\n{status_emoji} Общая система: {status_map.get(overall_status, overall_status)}"
             
-            await update.message.reply_text(health_text, parse_mode='Markdown')
+            # Handle both message and callback query
+            if update.message:
+                await update.message.reply_text(health_text, parse_mode='Markdown')
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(health_text, parse_mode='Markdown')
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=health_text,
+                    parse_mode='Markdown'
+                )
             
         except Exception as e:
             logger.error(f"Error in health command: {e}")
-            await update.message.reply_text("❌ Не удалось выполнить проверку системы")
+            # Handle both message and callback query for error
+            if update.message:
+                await update.message.reply_text("❌ Не удалось выполнить проверку системы")
+            elif update.callback_query:
+                await update.callback_query.edit_message_text("❌ Не удалось выполнить проверку системы")
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="❌ Не удалось выполнить проверку системы"
+                )
     
     @authorized_users_only
     @rate_limit
@@ -214,31 +282,71 @@ class BotHandlers:
         """Handle light commands"""
         try:
             # Extract command and room
-            command = update.message.text.split()[0].lower()
-            
-            # Handle both formats: lighton/lightoff and light_on/light_off
-            if "on" in command:
-                action = "on"
-            elif "off" in command:
-                action = "off"
+            if update.message:
+                command = update.message.text.split()[0].lower()
+                # Get room from context args
+                room = context.args[0] if context.args else "all"
+            elif update.callback_query:
+                # For callback queries, extract action from callback data
+                data = update.callback_query.data
+                if data == "light_all_on":
+                    action = "on"
+                    room = "all"
+                elif data == "light_all_off":
+                    action = "off"
+                    room = "all"
+                else:
+                    return  # Unknown callback data
             else:
-                action = "on"  # default
+                return  # No message or callback
             
-            # Get room from context args or command text
-            room = context.args[0] if context.args else "all"
+            if update.message:
+                # Handle both formats: lighton/lightoff and light_on/light_off
+                if "on" in command:
+                    action = "on"
+                elif "off" in command:
+                    action = "off"
+                else:
+                    action = "on"  # default
+            else:
+                # Callback query already handled above
+                pass
             
             # Execute command
             success = await device_manager.execute_device_command("lights", action, {"room": room})
             
             if success:
                 room_text = f"в {room}" if room != "all" else "во всех комнатах"
-                await update.message.reply_text(f"💡 Свет {'включен' if action == 'on' else 'выключен'} {room_text}")
+                response_text = f"💡 Свет {'включен' if action == 'on' else 'выключен'} {room_text}"
             else:
-                await update.message.reply_text("❌ Не удалось выполнить команду")
+                response_text = "❌ Не удалось выполнить команду"
+            
+            # Handle response for both message and callback query
+            if update.message:
+                await update.message.reply_text(response_text)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(response_text)
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=response_text
+                )
                 
         except Exception as e:
             logger.error(f"Light command error: {e}")
-            await update.message.reply_text("❌ Ошибка выполнения команды")
+            error_text = "❌ Ошибка выполнения команды"
+            # Handle error for both message and callback query
+            if update.message:
+                await update.message.reply_text(error_text)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(error_text)
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=error_text
+                )
     
     @authorized_users_only
     @rate_limit
@@ -247,32 +355,73 @@ class BotHandlers:
         """Handle TV commands"""
         try:
             # Extract command and action
-            command = update.message.text.split()[0].lower()
-            
-            if command == "tv":
-                # Handle tv with app argument
-                app = context.args[0] if context.args else None
-                if app:
-                    success = await device_manager.execute_device_command("tv", "launch_app", {"app": app})
-                    response_text = f"📺 Приложение {app} запущено" if success else f"❌ Не удалось запустить {app}"
+            if update.message:
+                command = update.message.text.split()[0].lower()
+            elif update.callback_query:
+                # For callback queries, extract action from callback data
+                data = update.callback_query.data
+                if data == "tv_on":
+                    action = "on"
+                    success = await device_manager.execute_device_command("tv", action, {})
+                    response_text = "📺 ТВ включен" if success else "❌ Не удалось включить ТВ"
+                elif data == "tv_off":
+                    action = "off"
+                    success = await device_manager.execute_device_command("tv", action, {})
+                    response_text = "📺 ТВ выключен" if success else "❌ Не удалось выключить ТВ"
+                elif data == "tv_netflix":
+                    success = await device_manager.execute_device_command("tv", "launch_app", {"app": "netflix"})
+                    response_text = "📺 Netflix запущен" if success else "❌ Не удалось запустить Netflix"
+                elif data == "tv_youtube":
+                    success = await device_manager.execute_device_command("tv", "launch_app", {"app": "youtube"})
+                    response_text = "📺 YouTube запущен" if success else "❌ Не удалось запустить YouTube"
                 else:
-                    success = await device_manager.execute_device_command("tv", "status", {})
-                    response_text = "📺 Статус ТВ получен" if success else "❌ Не удалось получить статус"
-            elif "on" in command:
-                success = await device_manager.execute_device_command("tv", "on", {})
-                response_text = "📺 ТВ включен" if success else "❌ Не удалось включить ТВ"
-            elif "off" in command:
-                success = await device_manager.execute_device_command("tv", "off", {})
-                response_text = "📺 ТВ выключен" if success else "❌ Не удалось выключить ТВ"
+                    return  # Unknown callback data
+                
+                # Handle response for callback query
+                await update.callback_query.edit_message_text(response_text)
+                return
             else:
-                success = False
-                response_text = "❌ Неизвестная команда"
+                return  # No message or callback
             
+            if update.message:
+                if command == "tv":
+                    # Handle tv with app argument
+                    app = context.args[0] if context.args else None
+                    if app:
+                        success = await device_manager.execute_device_command("tv", "launch_app", {"app": app})
+                        response_text = f"📺 Приложение {app} запущено" if success else f"❌ Не удалось запустить {app}"
+                    else:
+                        success = await device_manager.execute_device_command("tv", "status", {})
+                        response_text = "📺 Статус ТВ получен" if success else "❌ Не удалось получить статус"
+                elif "on" in command:
+                    success = await device_manager.execute_device_command("tv", "on", {})
+                    response_text = "📺 ТВ включен" if success else "❌ Не удалось включить ТВ"
+                elif "off" in command:
+                    success = await device_manager.execute_device_command("tv", "off", {})
+                    response_text = "📺 ТВ выключен" if success else "❌ Не удалось выключить ТВ"
+                else:
+                    success = False
+                    response_text = "❌ Неизвестная команда"
+            else:
+                return  # Message case already handled above
+            
+            # Handle response for message
             await update.message.reply_text(response_text)
-            
+                
         except Exception as e:
             logger.error(f"Error in TV command: {e}")
-            await update.message.reply_text("❌ Ошибка выполнения команды")
+            error_text = "❌ Ошибка выполнения команды"
+            # Handle error for both message and callback query
+            if update.message:
+                await update.message.reply_text(error_text)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(error_text)
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=error_text
+                )
     
     @authorized_users_only
     @rate_limit
@@ -281,18 +430,38 @@ class BotHandlers:
         """Handle vacuum commands"""
         try:
             # Extract command and action
-            command = update.message.text.split()[0].lower()
-            
-            if "start" in command:
-                action = "start"
-            elif "pause" in command:
-                action = "pause"
-            elif "dock" in command:
-                action = "dock"
-            elif "find" in command:
-                action = "find"
+            if update.message:
+                command = update.message.text.split()[0].lower()
+            elif update.callback_query:
+                # For callback queries, extract action from callback data
+                data = update.callback_query.data
+                if data == "vacuum_start":
+                    action = "start"
+                elif data == "vacuum_pause":
+                    action = "pause"
+                elif data == "vacuum_dock":
+                    action = "dock"
+                elif data == "vacuum_find":
+                    action = "find"
+                else:
+                    return  # Unknown callback data
             else:
-                action = "status"
+                return  # No message or callback
+            
+            if update.message:
+                if "start" in command:
+                    action = "start"
+                elif "pause" in command:
+                    action = "pause"
+                elif "dock" in command:
+                    action = "dock"
+                elif "find" in command:
+                    action = "find"
+                else:
+                    action = "status"
+            else:
+                # Callback query already handled above
+                pass
             
             if action == "start":
                 success = await device_manager.execute_device_command("vacuum", "start", {})
@@ -310,11 +479,32 @@ class BotHandlers:
                 success = await device_manager.execute_device_command("vacuum", "status", {})
                 response_text = "🤖 Статус пылесоса получен" if success else "❌ Не удалось получить статус"
             
-            await update.message.reply_text(response_text)
-            
+            # Handle response for both message and callback query
+            if update.message:
+                await update.message.reply_text(response_text)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(response_text)
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=response_text
+                )
+                
         except Exception as e:
             logger.error(f"Error in vacuum command: {e}")
-            await update.message.reply_text("❌ Ошибка выполнения команды")
+            error_text = "❌ Ошибка выполнения команды"
+            # Handle error for both message and callback query
+            if update.message:
+                await update.message.reply_text(error_text)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(error_text)
+            else:
+                # Fallback - send new message
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=error_text
+                )
     
     @authorized_users_only
     @rate_limit
